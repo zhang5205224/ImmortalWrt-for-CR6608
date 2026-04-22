@@ -10,12 +10,29 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build OpenWrt
-        uses: P3TERX/Actions-OpenWrt@master
+      - name: Update & Install Packages
+        run: |
+          sudo apt update -y
+          sudo apt install -y build-essential libncurses5-dev gawk git subversion libssl-dev gettext unzip python3-pyelftools file
+
+      - name: Clone ImmortalWrt Source
+        run: |
+          git clone https://github.com/immortalwrt/immortalwrt.git --depth 1 openwrt
+          cd openwrt
+          cp ../.config .config
+
+      - name: Build Firmware
+        run: |
+          cd openwrt
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+          make -j$(nproc) V=s
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
         with:
-          repo: immortalwrt/immortalwrt
-          branch: master
-          config_file: .config
+          name: ImmortalWrt-CR6608-Firmware
+          path: openwrt/bin/targets/ramips/mt7621/*.bin
