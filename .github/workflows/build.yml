@@ -1,10 +1,7 @@
-name: Build ImmortalWrt for CR6608
+name: Build ImmortalWrt for CR6608 (Fixed)
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
 
 jobs:
   build:
@@ -13,26 +10,79 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Update & Install Packages
-        run: |
-          sudo apt update -y
-          sudo apt install -y build-essential libncurses5-dev gawk git subversion libssl-dev gettext unzip python3-pyelftools file
+      - name: Install deps
+        run: sudo apt update && sudo apt install -y build-essential libncurses5-dev gawk git subversion libssl-dev gettext unzip python3-pyelftools file
 
-      - name: Clone ImmortalWrt Source
-        run: |
-          git clone https://github.com/immortalwrt/immortalwrt.git --depth 1 openwrt
-          cd openwrt
-          cp ../.config .config
+      - name: Clone ImmortalWrt
+        run: git clone https://github.com/immortalwrt/immortalwrt.git --depth 1 openwrt
 
-      - name: Build Firmware
+      - name: Add feeds (包含所有插件源)
         run: |
           cd openwrt
+          echo "src-git kenzo https://github.com/kenzok8/openwrt-packages" >> feeds.conf.default
+          echo "src-git small https://github.com/kenzok8/small" >> feeds.conf.default
           ./scripts/feeds update -a
           ./scripts/feeds install -a
+
+      - name: Generate .config
+        run: |
+          cd openwrt
+          cat > .config << 'EOF'
+          CONFIG_TARGET_ramips=y
+          CONFIG_TARGET_ramips_mt7621=y
+          CONFIG_TARGET_ramips_mt7621_DEVICE_xiaomi_mi-router-cr6608=y
+          CONFIG_PACKAGE_luci=y
+          CONFIG_PACKAGE_luci-base=y
+          CONFIG_PACKAGE_luci-mod-admin-full=y
+          CONFIG_PACKAGE_luci-mod-network=y
+          CONFIG_PACKAGE_luci-mod-status=y
+          CONFIG_PACKAGE_luci-mod-system=y
+          CONFIG_PACKAGE_luci-proto-ppp=y
+          CONFIG_PACKAGE_luci-proto-ipv6=y
+          CONFIG_PACKAGE_uhttpd=y
+          CONFIG_PACKAGE_uhttpd-mod-ubus=y
+          CONFIG_PACKAGE_rpcd=y
+          CONFIG_PACKAGE_liblucihttp=y
+          CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
+          CONFIG_PACKAGE_luci-theme-argon=y
+          CONFIG_IPV6=y
+          CONFIG_PACKAGE_dnsmasq-full=y
+          CONFIG_PACKAGE_luci-app-ttyd=y
+          CONFIG_PACKAGE_luci-app-autoreboot=y
+          CONFIG_PACKAGE_luci-app-filetransfer=y
+          CONFIG_PACKAGE_luci-app-ddnsto=y
+          CONFIG_PACKAGE_luci-app-samba4=y
+          CONFIG_PACKAGE_luci-app-upnp=y
+          CONFIG_PACKAGE_luci-app-arpbind=y
+          CONFIG_PACKAGE_luci-app-mwan3=y
+          CONFIG_PACKAGE_luci-app-zerotier=y
+          CONFIG_PACKAGE_luci-app-openclash=y
+          CONFIG_PACKAGE_luci-app-nodekeep=y
+          CONFIG_PACKAGE_luci-app-wechatpush=y
+          CONFIG_PACKAGE_coreutils-nohup=y
+          CONFIG_PACKAGE_curl=y
+          CONFIG_PACKAGE_jq=y
+          CONFIG_PACKAGE_unzip=y
+          CONFIG_PACKAGE_kmod-tun=y
+          CONFIG_PACKAGE_iptables=y
+          CONFIG_PACKAGE_ipset=y
+          CONFIG_PACKAGE_iptables-mod-tproxy=y
+          CONFIG_PACKAGE_kmod-ipt-tproxy=y
+          CONFIG_PACKAGE_wpad-openssl=y
+          CONFIG_PACKAGE_kmod-mt7615e=y
+          CONFIG_PACKAGE_kmod-mt7663-firmware-ap=y
+          CONFIG_PACKAGE_hostapd-common=y
+          CONFIG_PACKAGE_wpad-basic-wolfssl=y
+          EOF
+          make defconfig
+
+      - name: Compile
+        run: |
+          cd openwrt
           make -j$(nproc) V=s
 
-      - name: Upload Artifacts
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: ImmortalWrt-CR6608-Firmware
+          name: ImmortalWrt-CR6608-Fixed
           path: openwrt/bin/targets/ramips/mt7621/*.bin
