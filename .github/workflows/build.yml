@@ -10,13 +10,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build ImmortalWrt
-        uses: P3TERX/Actions-OpenWrt@main
+      - name: Build OpenWrt
+        uses: P3TERX/Actions-OpenWrt@master
         with:
           repo: immortalwrt/immortalwrt
           branch: master
-          target: x86_64
-          file: .config
+          config_file: .config
