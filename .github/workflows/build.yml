@@ -1,4 +1,4 @@
-name: Build ImmortalWrt for CR6608 (Fixed)
+name: Build ImmortalWrt for CR6608 (Full + Chinese)
 
 on:
   workflow_dispatch:
@@ -16,7 +16,7 @@ jobs:
       - name: Clone ImmortalWrt
         run: git clone https://github.com/immortalwrt/immortalwrt.git --depth 1 openwrt
 
-      - name: Add feeds (包含所有插件源)
+      - name: Add feeds
         run: |
           cd openwrt
           echo "src-git kenzo https://github.com/kenzok8/openwrt-packages" >> feeds.conf.default
@@ -31,6 +31,7 @@ jobs:
           CONFIG_TARGET_ramips=y
           CONFIG_TARGET_ramips_mt7621=y
           CONFIG_TARGET_ramips_mt7621_DEVICE_xiaomi_mi-router-cr6608=y
+          CONFIG_PACKAGE_opkg=y
           CONFIG_PACKAGE_luci=y
           CONFIG_PACKAGE_luci-base=y
           CONFIG_PACKAGE_luci-mod-admin-full=y
@@ -43,7 +44,6 @@ jobs:
           CONFIG_PACKAGE_uhttpd-mod-ubus=y
           CONFIG_PACKAGE_rpcd=y
           CONFIG_PACKAGE_liblucihttp=y
-          CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
           CONFIG_PACKAGE_luci-theme-argon=y
           CONFIG_IPV6=y
           CONFIG_PACKAGE_dnsmasq-full=y
@@ -71,8 +71,7 @@ jobs:
           CONFIG_PACKAGE_wpad-openssl=y
           CONFIG_PACKAGE_kmod-mt7615e=y
           CONFIG_PACKAGE_kmod-mt7663-firmware-ap=y
-          CONFIG_PACKAGE_hostapd-common=y
-          CONFIG_PACKAGE_wpad-basic-wolfssl=y
+          CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
           EOF
           make defconfig
 
@@ -84,5 +83,5 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: ImmortalWrt-CR6608-Fixed
+          name: ImmortalWrt-CR6608-Full
           path: openwrt/bin/targets/ramips/mt7621/*.bin
