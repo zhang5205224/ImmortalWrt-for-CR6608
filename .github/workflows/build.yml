@@ -1,5 +1,5 @@
-# 工作流名称：为小米 CR6608 编译 ImmortalWrt（完整版 + 中文 + 多源仓库）
-name: Build ImmortalWrt for CR6608 (2026.04.23)
+# 工作流名称：为小米 CR6608 编译 ImmortalWrt（完整版 + 中文）
+name: Build ImmortalWrt for CR6608 (Full + Chinese)
 
 # 触发条件：手动触发（workflow_dispatch）
 on:
@@ -28,34 +28,9 @@ jobs:
       - name: Add feeds
         run: |
           cd openwrt
-
-          # ================= 以下为新增或保留的第三方软件源 =================
-          # kenzok8 的常用包集合（openwrt-packages 和 small）
+          # 向 feeds 配置文件追加 kenzok8 的两个软件包仓库
           echo "src-git kenzo https://github.com/kenzok8/openwrt-packages" >> feeds.conf.default
           echo "src-git small https://github.com/kenzok8/small" >> feeds.conf.default
-
-          # Lienol 的软件包仓库（包含一些科学上网插件依赖）
-          echo "src-git lienol https://github.com/Lienol/openwrt-package" >> feeds.conf.default
-
-          # 完整的 Hello World 仓库（包含 passwall、ssr-plus 等）
-          echo "src-git helloworld https://github.com/fw876/helloworld" >> feeds.conf.default
-
-          # 独立的 PassWall 仓库（如果上面 helloworld 已包含可二选一）
-          echo "src-git passwall https://github.com/xiaorouji/openwrt-passwall" >> feeds.conf.default
-
-          # 独立的 PassWall2 仓库（另一种选择）
-          echo "src-git passwall2 https://github.com/xiaorouji/openwrt-passwall2" >> feeds.conf.default
-
-          # OpenClash 独立仓库（如果之前插件中已包含可忽略，此处作为备选）
-          echo "src-git openclash https://github.com/vernesong/OpenClash" >> feeds.conf.default
-
-          # V2Ray / Xray 相关核心程序（某些插件需要）
-          echo "src-git v2ray https://github.com/kuoruan/openwrt-v2ray" >> feeds.conf.default
-
-          # 主题仓库（更多主题选择）
-          echo "src-git themes https://github.com/kenzok8/luci-theme-ifit" >> feeds.conf.default
-          # =================================================================
-
           # 更新所有 feeds 源，并安装 feeds 中的软件包定义
           ./scripts/feeds update -a
           ./scripts/feeds install -a
