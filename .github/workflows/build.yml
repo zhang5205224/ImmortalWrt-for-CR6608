@@ -1,91 +1,149 @@
-name: Build ImmortalWrt for CR6608 (Full + Chinese)
+# 工作流名称：为小米 CR6608 编译 ImmortalWrt（完整版 + 中文 + 多源仓库）
+name: Build ImmortalWrt for CR6608 (2026.04.23)
 
+# 触发条件：手动触发（workflow_dispatch）
 on:
   workflow_dispatch:
 
 jobs:
+  # 任务名称：build
   build:
+    # 运行环境：最新版 Ubuntu
     runs-on: ubuntu-latest
+
     steps:
+      # 步骤1：检出代码（将当前仓库的代码拉到运行环境中）
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 步骤2：安装编译所需的依赖软件包
       - name: Install deps
         run: sudo apt update && sudo apt install -y build-essential libncurses5-dev gawk git subversion libssl-dev gettext unzip python3-pyelftools file
 
+      # 步骤3：克隆 ImmortalWrt 主仓库（浅克隆，只取最新一次提交以加快速度）
       - name: Clone ImmortalWrt
         run: git clone https://github.com/immortalwrt/immortalwrt.git --depth 1 openwrt
 
+      # 步骤4：添加额外的软件源（feeds）并更新安装
       - name: Add feeds
         run: |
           cd openwrt
+
+          # ================= 以下为新增或保留的第三方软件源 =================
+          # kenzok8 的常用包集合（openwrt-packages 和 small）
           echo "src-git kenzo https://github.com/kenzok8/openwrt-packages" >> feeds.conf.default
           echo "src-git small https://github.com/kenzok8/small" >> feeds.conf.default
+
+          # Lienol 的软件包仓库（包含一些科学上网插件依赖）
+          echo "src-git lienol https://github.com/Lienol/openwrt-package" >> feeds.conf.default
+
+          # 完整的 Hello World 仓库（包含 passwall、ssr-plus 等）
+          echo "src-git helloworld https://github.com/fw876/helloworld" >> feeds.conf.default
+
+          # 独立的 PassWall 仓库（如果上面 helloworld 已包含可二选一）
+          echo "src-git passwall https://github.com/xiaorouji/openwrt-passwall" >> feeds.conf.default
+
+          # 独立的 PassWall2 仓库（另一种选择）
+          echo "src-git passwall2 https://github.com/xiaorouji/openwrt-passwall2" >> feeds.conf.default
+
+          # OpenClash 独立仓库（如果之前插件中已包含可忽略，此处作为备选）
+          echo "src-git openclash https://github.com/vernesong/OpenClash" >> feeds.conf.default
+
+          # V2Ray / Xray 相关核心程序（某些插件需要）
+          echo "src-git v2ray https://github.com/kuoruan/openwrt-v2ray" >> feeds.conf.default
+
+          # 主题仓库（更多主题选择）
+          echo "src-git themes https://github.com/kenzok8/luci-theme-ifit" >> feeds.conf.default
+          # =================================================================
+
+          # 更新所有 feeds 源，并安装 feeds 中的软件包定义
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
+      # 步骤5：生成编译配置文件 .config
       - name: Generate .config
         run: |
           cd openwrt
+          # 使用 cat 和 heredoc 创建 .config 文件，内容为预定义的编译选项
           cat > .config << 'EOF'
+          # 目标平台：ramips（MT7621 子平台）
           CONFIG_TARGET_ramips=y
           CONFIG_TARGET_ramips_mt7621=y
+          # 设备型号：小米 CR6608
           CONFIG_TARGET_ramips_mt7621_DEVICE_xiaomi_mi-router-cr6608=y
-          # 强制包含包管理器
+
+          # 强制包含包管理器 opkg（确保能安装 ipk）
           CONFIG_PACKAGE_opkg=y
-          # LuCI 核心
+
+          # LuCI 网页管理界面核心组件
           CONFIG_PACKAGE_luci=y
           CONFIG_PACKAGE_luci-base=y
           CONFIG_PACKAGE_luci-mod-admin-full=y
           CONFIG_PACKAGE_luci-mod-network=y
           CONFIG_PACKAGE_luci-mod-status=y
           CONFIG_PACKAGE_luci-mod-system=y
-          CONFIG_PACKAGE_luci-proto-ppp=y
-          CONFIG_PACKAGE_luci-proto-ipv6=y
-          CONFIG_PACKAGE_uhttpd=y
-          CONFIG_PACKAGE_uhttpd-mod-ubus=y
-          CONFIG_PACKAGE_rpcd=y
-          CONFIG_PACKAGE_liblucihttp=y
-          CONFIG_PACKAGE_luci-theme-argon=y
-          # 中文语言包
+          CONFIG_PACKAGE_luci-proto-ppp=y          # PPP 协议支持（拨号上网）
+          CONFIG_PACKAGE_luci-proto-ipv6=y         # IPv6 协议支持
+          CONFIG_PACKAGE_uhttpd=y                  # Web 服务器
+          CONFIG_PACKAGE_uhttpd-mod-ubus=y         # ubus 支持（LuCI 与后台通信）
+          CONFIG_PACKAGE_rpcd=y                    # 远程过程调用守护进程
+          CONFIG_PACKAGE_liblucihttp=y             # LuCI HTTP 库
+          CONFIG_PACKAGE_luci-theme-argon=y        # 使用 Argon 主题
+
+          # 中文语言包（基础界面翻译）
           CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
-          # 其他插件（按需保留）
+
+          # IPv6 支持
           CONFIG_IPV6=y
-          CONFIG_PACKAGE_dnsmasq-full=y
-          CONFIG_PACKAGE_luci-app-ttyd=y
-          CONFIG_PACKAGE_luci-app-autoreboot=y
-          CONFIG_PACKAGE_luci-app-filetransfer=y
-          CONFIG_PACKAGE_luci-app-ddnsto=y
-          CONFIG_PACKAGE_luci-app-samba4=y
-          CONFIG_PACKAGE_luci-app-upnp=y
-          CONFIG_PACKAGE_luci-app-arpbind=y
-          CONFIG_PACKAGE_luci-app-mwan3=y
-          CONFIG_PACKAGE_luci-app-zerotier=y
-          CONFIG_PACKAGE_luci-app-openclash=y
-          CONFIG_PACKAGE_luci-app-nodekeep=y
-          CONFIG_PACKAGE_luci-app-wechatpush=y
-          CONFIG_PACKAGE_coreutils-nohup=y
-          CONFIG_PACKAGE_curl=y
-          CONFIG_PACKAGE_jq=y
-          CONFIG_PACKAGE_unzip=y
-          CONFIG_PACKAGE_kmod-tun=y
-          CONFIG_PACKAGE_iptables=y
-          CONFIG_PACKAGE_ipset=y
-          CONFIG_PACKAGE_iptables-mod-tproxy=y
-          CONFIG_PACKAGE_kmod-ipt-tproxy=y
-          CONFIG_PACKAGE_wpad-openssl=y
+          CONFIG_PACKAGE_dnsmasq-full=y            # 完整版 dnsmasq（支持 IPv6、DHCPv6 等）
+
+          # 各种常用插件（LuCI App）
+          CONFIG_PACKAGE_luci-app-ttyd=y           # 网页终端
+          CONFIG_PACKAGE_luci-app-autoreboot=y     # 定时重启
+          CONFIG_PACKAGE_luci-app-filetransfer=y   # 文件传输
+          CONFIG_PACKAGE_luci-app-ddnsto=y         # DDNSTO 内网穿透
+          CONFIG_PACKAGE_luci-app-samba4=y         # Samba 网络共享
+          CONFIG_PACKAGE_luci-app-upnp=y           # UPnP 自动端口转发
+          CONFIG_PACKAGE_luci-app-arpbind=y        # IP/MAC 绑定
+          CONFIG_PACKAGE_luci-app-mwan3=y          # 多 WAN 负载均衡
+          CONFIG_PACKAGE_luci-app-zerotier=y       # ZeroTier 虚拟局域网
+          CONFIG_PACKAGE_luci-app-openclash=y      # OpenClash 科学上网
+          CONFIG_PACKAGE_luci-app-nodekeep=y       # NodeKeep 节点保活
+          CONFIG_PACKAGE_luci-app-wechatpush=y     # 微信推送
+          CONFIG_PACKAGE_luci-app-turboacc=y       # Turbo ACC 网络加速
+
+          # 一些基础工具
+          CONFIG_PACKAGE_coreutils-nohup=y         # nohup 命令
+          CONFIG_PACKAGE_curl=y                    # curl 网络工具
+          CONFIG_PACKAGE_jq=y                      # JSON 处理工具
+          CONFIG_PACKAGE_unzip=y                   # unzip 解压
+
+          # 内核模块与防火墙相关（用于透明代理）
+          CONFIG_PACKAGE_kmod-tun=y                # TUN/TAP 虚拟网卡驱动
+          CONFIG_PACKAGE_iptables=y                # iptables 防火墙工具
+          CONFIG_PACKAGE_ipset=y                   # IP 集合管理
+          CONFIG_PACKAGE_iptables-mod-tproxy=y     # TPROXY 模块（透明代理需要）
+          CONFIG_PACKAGE_kmod-ipt-tproxy=y         # 内核 TPROXY 支持
+
+          # Wi-Fi 驱动与固件（MT7615E + MT7663）
+          CONFIG_PACKAGE_wpad-openssl=y            # 使用 OpenSSL 的 wpad（WPA 认证）
           CONFIG_PACKAGE_kmod-mt7615e=y
           CONFIG_PACKAGE_kmod-mt7663-firmware-ap=y
           EOF
+          # 执行 make defconfig 扩展 .config 中的默认依赖
           make defconfig
 
+      # 步骤6：开始编译（使用所有 CPU 核心，显示详细日志）
       - name: Compile
         run: |
           cd openwrt
           make -j$(nproc) V=s
 
+      # 步骤7：上传编译生成的固件文件（.bin 文件）
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
+          # 压缩包名称
           name: ImmortalWrt-CR6608-Full
+          # 要上传的文件路径（匹配所有 .bin 固件文件）
           path: openwrt/bin/targets/ramips/mt7621/*.bin
